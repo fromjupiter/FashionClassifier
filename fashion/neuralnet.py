@@ -28,14 +28,23 @@ def normalize_data(img):
     """
     Normalize your inputs here and return them.
     """
-    return img
+    #min-max norm
+    imin = img.min(axis=1)
+    imax = img.max(axis=1)
+    img = (img.T - imin)/(imax-imin)
+    return img.T
 
 
 def one_hot_encoding(labels, num_classes=10):
     """
     Encode labels using one hot encoding and return them.
     """
-    return labels
+    res = np.zeros((len(labels), num_classes))
+    for i, l in enumerate(labels):
+        res[i][l] = 1
+    
+    # recover by np.argmax(res, axis=1)
+    return res
 
 
 def load_data(path, mode='train'):
@@ -59,12 +68,14 @@ def load_data(path, mode='train'):
     return normalized_images, one_hot_labels
 
 
-def softmax(x):
+def softmax(x, axis=0):
     """
     Implement the softmax function here.
     Remember to take care of the overflow condition.
     """
-    raise NotImplementedError("Softmax not implemented")
+    # avoid overflow
+    x -= np.max(x, axis=axis)
+    return np.exp(x)/np.sum(np.exp(x), axis=axis)
 
 
 class Activation():
@@ -97,6 +108,7 @@ class Activation():
         return self.forward(a)
 
     def forward(self, a):
+        self.x = a
         """
         Compute the forward pass.
         """
@@ -128,37 +140,37 @@ class Activation():
         """
         Implement the sigmoid activation here.
         """
-        raise NotImplementedError("Sigmoid not implemented")
+        return 1/(1+np.exp(-x))
 
     def tanh(self, x):
         """
         Implement tanh here.
         """
-        raise NotImplementedError("Tanh not implemented")
+        return 1.7159*np.tanh(2/3*x)
 
     def ReLU(self, x):
         """
         Implement ReLU here.
         """
-        raise NotImplementedError("ReLu not implemented")
+        return x * (x > 0)
 
     def grad_sigmoid(self):
         """
         Compute the gradient for sigmoid here.
         """
-        raise NotImplementedError("Sigmoid gradient not implemented")
+        return self.sigmoid(self.x)*(1-self.sigmoid(self.x))
 
     def grad_tanh(self):
         """
         Compute the gradient for tanh here.
         """
-        raise NotImplementedError("tanh gradient not implemented")
+        return 1.1439/np.square(np.cosh(2/3*self.x))
 
     def grad_ReLU(self):
         """
         Compute the gradient for ReLU here.
         """
-        raise NotImplementedError("ReLU gradient not implemented")
+        return self.x>0
 
 
 class Layer():
@@ -290,8 +302,21 @@ if __name__ == "__main__":
     x_train, y_train = load_data(path="./", mode="train")
     x_test,  y_test  = load_data(path="./", mode="t10k")
 
+    print(x_train.shape)
+    print(y_train.shape)
     # Create splits for validation data here.
-    # x_valid, y_valid = ...
+    train_indices = []
+    valid_indices = []
+
+    # evenly distribute labels
+    for i in range(0, y_train.shape[1]):
+        total = np.argwhere(y_train[:,i]==1).flatten()
+        valid_indices.extend(total[:1000])
+        train_indices.extend(total[1000:])
+
+    assert sum(valid_indices)+sum(train_indices) == sum(range(len(x_train)))
+    x_valid, y_valid = x_train[valid_indices], y_train[valid_indices]
+    x_train, y_train = x_train[train_indices], y_train[train_indices]
 
     # train the model
     train(model, x_train, y_train, x_valid, y_valid, config)
