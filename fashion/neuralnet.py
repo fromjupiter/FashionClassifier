@@ -306,28 +306,27 @@ def test(model, X_test, y_test):
     raise NotImplementedError("Test method not implemented")
 
 def check_grad(model, X_check, y_check):
-    model.forward(X_check, targets=y_check)
-    model.backward()
     X_check =X_check[:1]
     y_check =y_check[:1]
     table = []
     epsilon = 1e-2
-    print(X_check.shape)
-    print(y_check)
     # output bias check
     # hidden bias check
     # hidden to output check
     # input to hidden check
-    # check_list = ['model.layers[-1].d_b[0]', 'model.layers[-3].d_b[0]', 'model.layers[-1].d_w[0][0]', 'model.layers[-1].d_w[1][1]',\
-    #     'model.layers[0].d_w[0][0]', 'model.layers[0].d_w[0][0]']
-    check_list = ['model.layers[-1].d_b[0]']
+    check_list = ['model.layers[-1].d_b[0]', 'model.layers[-3].d_b[0]', 'model.layers[-1].d_w[0][0]', 'model.layers[-1].d_w[1][1]',\
+        'model.layers[2].d_w[0][0]', 'model.layers[2].d_w[1][1]']
+    
     for grad in check_list:
+        model.forward(X_check, targets=y_check)
+        model.backward()
         target = grad.replace('d_','')
-        x=[target, epsilon, eval(grad), None]
+        x=[target, epsilon, -eval(grad), None]
         exec(target+' -= epsilon')
         pre = model.forward(X_check, targets=y_check)[1]
         exec(target+' += 2*epsilon')
-        x[3] = (model.forward(X_check, targets=y_check)[1] - pre)/epsilon/2
+        curr = model.forward(X_check, targets=y_check)[1]
+        x[3] = (curr - pre)/epsilon/2
         table.append(x)
     
     df = pd.DataFrame(table, columns=['target','epsilon','gradient','approx'])
@@ -358,8 +357,9 @@ if __name__ == "__main__":
         check_indices.extend(total[:2])
         valid_indices.extend(total[:1000])
         train_indices.extend(total[1000:])
-
+    print("---- Checking gradient ----")
     check_grad(model, x_train[check_indices], y_train[check_indices])
+    print("---- Checking done ----")
 
     assert sum(valid_indices)+sum(train_indices) == sum(range(len(x_train)))
     x_valid, y_valid = x_train[valid_indices], y_train[valid_indices]
