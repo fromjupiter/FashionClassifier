@@ -16,6 +16,7 @@ import os, gzip
 import yaml
 import numpy as np
 
+import pandas as pd
 
 def load_config(path):
     """
@@ -74,8 +75,8 @@ def softmax(x, axis=1):
     Remember to take care of the overflow condition.
     """
     # avoid overflow
-    x -= np.max(x, axis=axis)
-    return np.exp(x)/np.sum(np.exp(x), axis=axis)
+    x = x - np.max(x, axis=axis, keepdims=True)
+    return np.exp(x)/np.sum(np.exp(x), axis=axis, keepdims=True)
 
 
 class Activation():
@@ -221,7 +222,7 @@ class Layer():
         """
         self.d_x = delta.dot(self.w.T)
         self.d_w = self.x.T.dot(delta)
-        self.d_b = delta
+        self.d_b = delta.sum(axis=0)
         return self.d_x
 
 
@@ -273,7 +274,7 @@ class Neuralnetwork():
         '''
         compute the categorical cross-entropy loss and return it.
         '''
-        return -np.log(logits).dot(targets)
+        return -(np.log(logits)*targets).sum()
 
     def backward(self):
         '''
@@ -304,6 +305,36 @@ def test(model, X_test, y_test):
 
     raise NotImplementedError("Test method not implemented")
 
+def check_grad(model, X_check, y_check):
+    model.forward(X_check, targets=y_check)
+    model.backward()
+    X_check =X_check[:1]
+    y_check =y_check[:1]
+    table = []
+    epsilon = 1e-2
+    print(X_check.shape)
+    print(y_check)
+    # output bias check
+    # hidden bias check
+    # hidden to output check
+    # input to hidden check
+    # check_list = ['model.layers[-1].d_b[0]', 'model.layers[-3].d_b[0]', 'model.layers[-1].d_w[0][0]', 'model.layers[-1].d_w[1][1]',\
+    #     'model.layers[0].d_w[0][0]', 'model.layers[0].d_w[0][0]']
+    check_list = ['model.layers[-1].d_b[0]']
+    for grad in check_list:
+        target = grad.replace('d_','')
+        x=[target, epsilon, eval(grad), None]
+        exec(target+' -= epsilon')
+        pre = model.forward(X_check, targets=y_check)[1]
+        exec(target+' += 2*epsilon')
+        x[3] = (model.forward(X_check, targets=y_check)[1] - pre)/epsilon/2
+        table.append(x)
+    
+    df = pd.DataFrame(table, columns=['target','epsilon','gradient','approx'])
+    print(df)
+
+
+
 
 if __name__ == "__main__":
     # Load the configuration.
@@ -319,12 +350,16 @@ if __name__ == "__main__":
     # Create splits for validation data here.
     train_indices = []
     valid_indices = []
+    check_indices = []
 
     # evenly distribute labels
     for i in range(0, y_train.shape[1]):
         total = np.argwhere(y_train[:,i]==1).flatten()
+        check_indices.extend(total[:2])
         valid_indices.extend(total[:1000])
         train_indices.extend(total[1000:])
+
+    check_grad(model, x_train[check_indices], y_train[check_indices])
 
     assert sum(valid_indices)+sum(train_indices) == sum(range(len(x_train)))
     x_valid, y_valid = x_train[valid_indices], y_train[valid_indices]
