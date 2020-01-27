@@ -304,15 +304,12 @@ def train(model, x_train, y_train, x_valid, y_valid, config):
     pre_dw = [0 for _ in range(layers)]
     pre_db = [0 for _ in range(layers)]
     for epoch in range(1):
-        for i in range(1):
-            printinput = x_train[batch_size*i:batch_size*(i+1),:]
+        for i in range(batch_size):
+            input = x_train[batch_size*i:batch_size*(i+1),:]
             target = y_train[batch_size*i:batch_size*(i+1),:]
             model.forward(input,targets=target)
             model.backward()
-            print()
             for j in range(layers):
-                model.layers[2*j].d_w
-                model.layers[2*j].d_b
                 model.layers[2*j].w += gamma*pre_dw[j] - lr*model.layers[2*j].d_w
                 model.layers[2*j].b += gamma*pre_db[j] - lr*model.layers[2*j].d_b
                 pre_dw[j] = model.layers[2*j].d_w
