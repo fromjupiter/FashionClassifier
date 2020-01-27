@@ -294,8 +294,26 @@ def train(model, x_train, y_train, x_valid, y_valid, config):
     Implement Early Stopping.
     Use config to set parameters for training like learning rate, momentum, etc.
     """
-
-    raise NotImplementedError("Train method not implemented")
+    batch_size = config['batch_size']
+    batches = x_train.shape[1]//batch_size
+    epoches = config['epochs']
+    errors = []
+    layers = len(model.layers)
+    lr = config['learning_rate']
+    gamma = config['momentum_gamma']
+    pre_
+    for epoch in range(epoches):
+        for i in range(batches):
+            input = x_train[:,batch_size*i:batch_size*(i+1)]
+            output = model(input)
+            model.backward()
+            for j in range(layers):
+                model.layers[j].w += lr*(gamma* + (1-gamma)*model.layers[j].d_w)
+                model.layers[j].b += lr*(gamma* + (1-gamma)*model.layers[j].d_b)
+        error = model.loss(x_valid,y_valid)
+        errors.append(error)
+        if config['early_stop'] and epoch >2 and errors[-1]>errors[-2]:
+            break
 
 
 def test(model, X_test, y_test):
@@ -364,8 +382,9 @@ if __name__ == "__main__":
     assert sum(valid_indices)+sum(train_indices) == sum(range(len(x_train)))
     x_valid, y_valid = x_train[valid_indices], y_train[valid_indices]
     x_train, y_train = x_train[train_indices], y_train[train_indices]
-
+    print(x_train.shape)
+    print(config)
     # train the model
     train(model, x_train, y_train, x_valid, y_valid, config)
-
+    
     test_acc = test(model, x_test, y_test)
