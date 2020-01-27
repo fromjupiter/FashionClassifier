@@ -295,22 +295,27 @@ def train(model, x_train, y_train, x_valid, y_valid, config):
     Use config to set parameters for training like learning rate, momentum, etc.
     """
     batch_size = config['batch_size']
-    batches = x_train.shape[1]//batch_size
+    batches = x_train.shape[0]//batch_size
     epoches = config['epochs']
     errors = []
     layers = len(model.layers)
     lr = config['learning_rate']
     gamma = config['momentum_gamma']
-    pre_
+    pre_weight_w = [0 for _ in range(layers)]
+    pre_weight_b = [0 for _ in range(layers)]
     for epoch in range(epoches):
         for i in range(batches):
-            input = x_train[:,batch_size*i:batch_size*(i+1)]
-            output = model(input)
+            input = x_train[batch_size*i:batch_size*(i+1),:]
+            target = y_train[batch_size*i:batch_size*(i+1),:]
+            model.forward(input,targets=target)
             model.backward()
             for j in range(layers):
-                model.layers[j].w += lr*(gamma* + (1-gamma)*model.layers[j].d_w)
-                model.layers[j].b += lr*(gamma* + (1-gamma)*model.layers[j].d_b)
-        error = model.loss(x_valid,y_valid)
+                model.layers[j].w += lr*(gamma*pre_weight_w[j] + (1-gamma)*model.layers[j].d_w)
+                model.layers[j].b += lr*(gamma*pre_weight_b[j] + (1-gamma)*model.layers[j].d_b)
+                pre_weight_w[j] = model.layers[j].d_w
+                pre_weight_b[j] = model.layers[j].d_b
+        output = model(x_valid)
+        error = model.loss(output,y_valid)
         errors.append(error)
         if config['early_stop'] and epoch >2 and errors[-1]>errors[-2]:
             break
