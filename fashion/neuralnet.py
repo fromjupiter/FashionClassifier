@@ -68,7 +68,7 @@ def load_data(path, mode='train'):
     return normalized_images, one_hot_labels
 
 
-def softmax(x, axis=0):
+def softmax(x, axis=1):
     """
     Implement the softmax function here.
     Remember to take care of the overflow condition.
@@ -146,7 +146,7 @@ class Activation():
         """
         Implement tanh here.
         """
-        return 1.7159*np.tanh(2/3*x)
+        return np.tanh(x)
 
     def ReLU(self, x):
         """
@@ -164,7 +164,7 @@ class Activation():
         """
         Compute the gradient for tanh here.
         """
-        return 1.1439/np.square(np.cosh(2/3*self.x))
+        return 1.0/np.square(np.cosh(self.x))
 
     def grad_ReLU(self):
         """
@@ -188,8 +188,8 @@ class Layer():
         Define the architecture and create placeholder.
         """
         np.random.seed(42)
-        self.w = None    # Declare the Weight matrix
-        self.b = None    # Create a placeholder for Bias
+        self.w = np.random.normal(size=(in_units, out_units))    # Declare the Weight matrix
+        self.b = np.zeros(out_units)    # Create a placeholder for Bias
         self.x = None    # Save the input to forward in this
         self.a = None    # Save the output of forward pass in this (without activation)
 
@@ -209,7 +209,9 @@ class Layer():
         Do not apply activation here.
         Return self.a
         """
-        raise NotImplementedError("Layer forward pass not implemented.")
+        self.x = x
+        self.a = self.x.dot(self.w) + self.b
+        return self.a
 
     def backward(self, delta):
         """
@@ -217,7 +219,10 @@ class Layer():
         computes gradient for its weights and the delta to pass to its previous layers.
         Return self.dx
         """
-        raise NotImplementedError("Backprop for Layer not implemented.")
+        self.d_x = delta.dot(self.w.T)
+        self.d_w = self.x.T.dot(delta)
+        self.d_b = delta
+        return self.d_x
 
 
 class Neuralnetwork():
@@ -256,20 +261,29 @@ class Neuralnetwork():
         Compute forward pass through all the layers in the network and return it.
         If targets are provided, return loss as well.
         """
-        raise NotImplementedError("Forward not implemented for NeuralNetwork")
+        if targets is not None:
+            self.targets = targets
+        self.x = x
+        for layer in self.layers:
+            x = layer.forward(x)
+        self.y = softmax(x, axis=1)
+        return (self.y, self.loss(self.y, targets) if targets is not None else None)
 
     def loss(self, logits, targets):
         '''
         compute the categorical cross-entropy loss and return it.
         '''
-        raise NotImplementedError("Loss not implemented for NeuralNetwork")
+        return -np.log(logits).dot(targets)
 
     def backward(self):
         '''
         Implement backpropagation here.
         Call backward methods of individual layer's.
         '''
-        raise NotImplementedError("Backprop not implemented for NeuralNetwork")
+        delta = self.targets - self.y
+        for layer in reversed(self.layers):
+            delta = layer.backward(delta)
+        return delta
 
 
 def train(model, x_train, y_train, x_valid, y_valid, config):
@@ -302,8 +316,6 @@ if __name__ == "__main__":
     x_train, y_train = load_data(path="./", mode="train")
     x_test,  y_test  = load_data(path="./", mode="t10k")
 
-    print(x_train.shape)
-    print(y_train.shape)
     # Create splits for validation data here.
     train_indices = []
     valid_indices = []
