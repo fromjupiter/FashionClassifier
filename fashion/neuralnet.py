@@ -15,7 +15,7 @@
 import os, gzip
 import yaml
 import numpy as np
-
+import matplotlib.pyplot as plt
 import pandas as pd
 
 def load_config(path):
@@ -220,9 +220,9 @@ class Layer():
         computes gradient for its weights and the delta to pass to its previous layers.
         Return self.dx
         """
-        self.d_x = delta.dot(self.w.T)
-        self.d_w = self.x.T.dot(delta)
-        self.d_b = delta.sum(axis=0)
+        self.d_x = delta.dot(self.w.T) 
+        self.d_w = self.x.T.dot(delta) / delta.shape[0]
+        self.d_b = delta.sum(axis=0) / delta.shape[0]
         return self.d_x
 
 
@@ -303,24 +303,42 @@ def train(model, x_train, y_train, x_valid, y_valid, config):
     gamma = config['momentum_gamma']
     pre_dw = [0 for _ in range(layers)]
     pre_db = [0 for _ in range(layers)]
-    for epoch in range(1):
-        for i in range(batch_size):
+    best_dw = [0 for _ in range(layers)]
+    best_db = [0 for _ in range(layers)]
+    for epoch in range(epoches):
+        for i in range(batches):
             input = x_train[batch_size*i:batch_size*(i+1),:]
             target = y_train[batch_size*i:batch_size*(i+1),:]
             model.forward(input,targets=target)
             model.backward()
             for j in range(layers):
-                model.layers[2*j].w += gamma*pre_dw[j] - lr*model.layers[2*j].d_w
-                model.layers[2*j].b += gamma*pre_db[j] - lr*model.layers[2*j].d_b
+                # model.layers[2*j].w += lr*model.layers[2*j].d_w
+                # model.layers[2*j].b += lr*model.layers[2*j].d_b
+                model.layers[2*j].w += gamma*pre_dw[j] + lr*model.layers[2*j].d_w
+                model.layers[2*j].b += gamma*pre_db[j] + lr*model.layers[2*j].d_b
                 pre_dw[j] = model.layers[2*j].d_w
                 pre_db[j] = model.layers[2*j].d_b
-        print(pre_dw)
-        (output,_) = model.forward(x_valid)
-        # print(output)
-        error = model.loss(output,y_valid)
+
+        (output,error) = model.forward(x_valid, targets=y_valid)
+        error = error/y_valid.shape[0]
+        if config['early_stop']:
+            count_reverse = 0
+            count = 0
+            if count> config['early_stop_epoc']-2 and error[count] >error[count-1]:
+                count_reverse += 1
+                if count_reverse == config['early_stop_epoc']-1:
+                    break
+            else:
+                count_reverse = 0
+                for j in range(layers):
+                    best_dw[j] = model.layers[2*j].w 
+                    best_db[j] = model.layers[2*j].b 
+            count += 1        
+        
         errors.append(error)
-        if config['early_stop_epoch'] and epoch >2 and errors[-1]>errors[-2]:
-            break
+    
+    plt.plot(errors)
+    plt.show()
 
 
 def test(model, X_test, y_test):
