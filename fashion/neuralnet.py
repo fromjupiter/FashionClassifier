@@ -298,26 +298,31 @@ def train(model, x_train, y_train, x_valid, y_valid, config):
     batches = x_train.shape[0]//batch_size
     epoches = config['epochs']
     errors = []
-    layers = len(model.layers)
+    layers = len(model.layers)//2+1
     lr = config['learning_rate']
     gamma = config['momentum_gamma']
-    pre_weight_w = [0 for _ in range(layers)]
-    pre_weight_b = [0 for _ in range(layers)]
-    for epoch in range(epoches):
-        for i in range(batches):
+    pre_dw = [0 for _ in range(layers)]
+    pre_db = [0 for _ in range(layers)]
+    for epoch in range(1):
+        for i in range(1):
             input = x_train[batch_size*i:batch_size*(i+1),:]
             target = y_train[batch_size*i:batch_size*(i+1),:]
             model.forward(input,targets=target)
             model.backward()
+            print()
             for j in range(layers):
-                model.layers[j].w += lr*(gamma*pre_weight_w[j] + (1-gamma)*model.layers[j].d_w)
-                model.layers[j].b += lr*(gamma*pre_weight_b[j] + (1-gamma)*model.layers[j].d_b)
-                pre_weight_w[j] = model.layers[j].d_w
-                pre_weight_b[j] = model.layers[j].d_b
-        output = model(x_valid)
+                model.layers[2*j].d_w
+                model.layers[2*j].d_b
+                model.layers[2*j].w += gamma*pre_dw[j] - lr*model.layers[2*j].d_w
+                model.layers[2*j].b += gamma*pre_db[j] - lr*model.layers[2*j].d_b
+                pre_dw[j] = model.layers[2*j].d_w
+                pre_db[j] = model.layers[2*j].d_b
+        print(pre_dw)
+        (output,_) = model.forward(x_valid)
+        # print(output)
         error = model.loss(output,y_valid)
         errors.append(error)
-        if config['early_stop'] and epoch >2 and errors[-1]>errors[-2]:
+        if config['early_stop_epoch'] and epoch >2 and errors[-1]>errors[-2]:
             break
 
 
@@ -387,8 +392,7 @@ if __name__ == "__main__":
     assert sum(valid_indices)+sum(train_indices) == sum(range(len(x_train)))
     x_valid, y_valid = x_train[valid_indices], y_train[valid_indices]
     x_train, y_train = x_train[train_indices], y_train[train_indices]
-    print(x_train.shape)
-    print(config)
+
     # train the model
     train(model, x_train, y_train, x_valid, y_valid, config)
     
