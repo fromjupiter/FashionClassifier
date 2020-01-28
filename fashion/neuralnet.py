@@ -301,11 +301,15 @@ def train(model, x_train, y_train, x_valid, y_valid, config):
     layers = len(model.layers)//2+1
     lr = config['learning_rate']
     gamma = config['momentum_gamma']
-    pre_dw = [0 for _ in range(layers)]
-    pre_db = [0 for _ in range(layers)]
+    lambd = config['L2_penalty']
+    v_dw = [0 for _ in range(layers)]
+    v_db = [0 for _ in range(layers)]
     best_dw = [0 for _ in range(layers)]
     best_db = [0 for _ in range(layers)]
     for epoch in range(epoches):
+        shuffle_index = list(np.random.permutation(x_train.shape[0]))
+        x_train = x_train[shuffle_index,:]
+        y_train = y_train[shuffle_index]
         for i in range(batches):
             input = x_train[batch_size*i:batch_size*(i+1),:]
             target = y_train[batch_size*i:batch_size*(i+1),:]
@@ -314,17 +318,18 @@ def train(model, x_train, y_train, x_valid, y_valid, config):
             for j in range(layers):
                 # model.layers[2*j].w += lr*model.layers[2*j].d_w
                 # model.layers[2*j].b += lr*model.layers[2*j].d_b
-                model.layers[2*j].w += gamma*pre_dw[j] + lr*model.layers[2*j].d_w
-                model.layers[2*j].b += gamma*pre_db[j] + lr*model.layers[2*j].d_b
-                pre_dw[j] = model.layers[2*j].d_w
-                pre_db[j] = model.layers[2*j].d_b
+                v_dw[j] = gamma*v_dw[j] + lr*model.layers[2*j].d_w
+                v_db[j] = gamma*v_db[j] + lr*model.layers[2*j].d_b
+                model.layers[2*j].w += v_dw[j]
+                model.layers[2*j].b += v_db[j]
 
         (output,error) = model.forward(x_valid, targets=y_valid)
+        print(error)
         error = error/y_valid.shape[0]
         if config['early_stop']:
             count_reverse = 0
             count = 0
-            if count> config['early_stop_epoc']-2 and error[count] >error[count-1]:
+            if count> config['early_stop_epoch']-2 and error[count] >error[count-1]:
                 count_reverse += 1
                 if count_reverse == config['early_stop_epoc']-1:
                     break
