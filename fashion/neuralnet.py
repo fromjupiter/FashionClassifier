@@ -122,7 +122,7 @@ class Activation():
         elif self.activation_type == "ReLU":
             return self.ReLU(a)
 
-    def backward(self, delta):
+    def backward(self, delta, reg, gamma,lr,grd_check = False):
         """
         Compute the backward pass.
         """
@@ -197,6 +197,8 @@ class Layer():
         self.d_x = None  # Save the gradient w.r.t x in this
         self.d_w = None  # Save the gradient w.r.t w in this
         self.d_b = None  # Save the gradient w.r.t b in this
+        self.v_dw = np.zeros_like(self.d_w) #xp
+        self.v_db = np.zeros_like(self.d_b) #xp
 
     def __call__(self, x):
         """
@@ -214,15 +216,22 @@ class Layer():
         self.a = self.x.dot(self.w) + self.b
         return self.a
 
-    def backward(self, delta):
+    def backward(self, delta,reg, gamma,lr,grd_check = False):
         """
         Write the code for backward pass. This takes in gradient from its next layer as input,
         computes gradient for its weights and the delta to pass to its previous layers.
         Return self.dx
         """
         self.d_x = delta.dot(self.w.T) 
-        self.d_w = self.x.T.dot(delta) / delta.shape[0]
-        self.d_b = delta.sum(axis=0) / delta.shape[0]
+        self.d_w = self.x.T.dot(delta) / delta.shape[0] + reg*self.w/ delta.shape[0] #xp
+        self.d_b = delta.sum(axis=0) / delta.shape[0] + reg*self.b/ delta.shape[0]  #xp
+        # self.d_w = self.x.T.dot(delta) / delta.shape[0]  #xp
+        # self.d_b = delta.sum(axis=0) / delta.shape[0]  #xp
+        if not grd_check:
+            self.v_dw = gamma*self.v_dw + lr*self.d_w   #xp
+            self.v_db = gamma*self.v_db + lr*self.d_b   #xp
+            self.w += self.v_dw #xp
+            self.b += self.v_db #xp
         return self.d_x
 
 
@@ -244,7 +253,9 @@ class Neuralnetwork():
         self.x = None        # Save the input to forward in this
         self.y = None        # Save the output vector of model in this
         self.targets = None  # Save the targets in forward in this variable
-
+        self.reg = config['L2_penalty'] #xp
+        self.gamma = config['momentum_gamma']#xp
+        self.lr = config['learning_rate'] #xp
         # Add layers specified by layer_specs.
         for i in range(len(config['layer_specs']) - 1):
             self.layers.append(Layer(config['layer_specs'][i], config['layer_specs'][i+1]))
@@ -274,17 +285,25 @@ class Neuralnetwork():
         '''
         compute the categorical cross-entropy loss and return it.
         '''
-        return -(np.log(logits)*targets).sum()
+        reg_loss = 0
+        for layer in self.layers:
+            try:
+                reg_loss += np.sum(layer.w*layer.w) + np.sum(layer.b*layer.b)
+            except AttributeError:
+                pass
+        loss = -(np.log(logits)*targets).sum() /targets.shape[0]+ self.reg*reg_loss /(2*targets.shape[0])
+        return loss
+        # return -(np.log(logits)*targets).sum() /targets.shape[0]   #xp
 
-    def backward(self):
+    def backward(self,grd_check = False):
         '''
         Implement backpropagation here.
         Call backward methods of individual layer's.
         '''
         delta = self.targets - self.y
         for layer in reversed(self.layers):
-            delta = layer.backward(delta)
-        return delta
+            delta = layer.backward(delta,self.reg,self.gamma,self.lr,grd_check)
+        # return delta #xp
 
 
 def train(model, x_train, y_train, x_valid, y_valid, config):
@@ -297,7 +316,6 @@ def train(model, x_train, y_train, x_valid, y_valid, config):
     batch_size = config['batch_size']
     lr = config['learning_rate']
     gamma = config['momentum_gamma']
-    lambd = config['L2_penalty']
     epoches = config['epochs']
     batches = x_train.shape[0]//batch_size
     valid_errors = []
@@ -308,7 +326,7 @@ def train(model, x_train, y_train, x_valid, y_valid, config):
     best_w = [0 for _ in range(layers)]
     best_b = [0 for _ in range(layers)]
     (_,valid_error) = model.forward(x_valid, targets=y_valid)
-    valid_errors.append(valid_error/y_valid.shape[0])
+    valid_errors.append(valid_error)
     for epoch in range(20):
         shuffle_index = list(np.random.permutation(x_train.shape[0]))
         x_train = x_train[shuffle_index,:]
@@ -319,17 +337,15 @@ def train(model, x_train, y_train, x_valid, y_valid, config):
             (_,train_error) = model.forward(input_train,targets=target_train)
             train_errors.append(train_error)
             model.backward()
-            for j in range(layers):
-                # model.layers[2*j].w += lr*model.layers[2*j].d_w
-                # model.layers[2*j].b += lr*model.layers[2*j].d_b
-                v_dw[j] = gamma*v_dw[j] + lr*model.layers[2*j].d_w
-                v_db[j] = gamma*v_db[j] + lr*model.layers[2*j].d_b
-                model.layers[2*j].w += v_dw[j]
-                model.layers[2*j].b += v_db[j]
+            # for j in range(layers):
+            #     v_dw[j] = gamma*v_dw[j] + lr*model.layers[2*j].d_w
+            #     v_db[j] = gamma*v_db[j] + lr*model.layers[2*j].d_b
+            #     model.layers[2*j].w += v_dw[j]
+            #     model.layers[2*j].b += v_db[j]
 
         (_,valid_error) = model.forward(x_valid, targets=y_valid)
-        #print(error)
-        valid_errors.append(valid_error/y_valid.shape[0])
+        print(valid_error)
+        valid_errors.append(valid_error)
         if config['early_stop']:
             if epoch> config['early_stop_epoch']-2 and valid_errors[epoch] >valid_errors[epoch-1]:
                 count_reverse += 1
@@ -378,7 +394,7 @@ def check_grad(model, X_check, y_check):
     
     for grad in check_list:
         model.forward(X_check, targets=y_check)
-        model.backward()
+        model.backward(grd_check = True) #xp
         target = grad.replace('d_','')
         x=[target, epsilon, -eval(grad), None]
         exec(target+' -= epsilon')
