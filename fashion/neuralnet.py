@@ -295,25 +295,29 @@ def train(model, x_train, y_train, x_valid, y_valid, config):
     Use config to set parameters for training like learning rate, momentum, etc.
     """
     batch_size = config['batch_size']
-    batches = x_train.shape[0]//batch_size
-    epoches = config['epochs']
-    errors = []
-    layers = len(model.layers)//2+1
     lr = config['learning_rate']
     gamma = config['momentum_gamma']
     lambd = config['L2_penalty']
+    epoches = config['epochs']
+    batches = x_train.shape[0]//batch_size
+    valid_errors = []
+    train_errors = []
+    layers = len(model.layers)//2+1
     v_dw = [0 for _ in range(layers)]
     v_db = [0 for _ in range(layers)]
-    best_dw = [0 for _ in range(layers)]
-    best_db = [0 for _ in range(layers)]
-    for epoch in range(epoches):
+    best_w = [0 for _ in range(layers)]
+    best_b = [0 for _ in range(layers)]
+    (_,valid_error) = model.forward(x_valid, targets=y_valid)
+    valid_errors.append(valid_error/y_valid.shape[0])
+    for epoch in range(20):
         shuffle_index = list(np.random.permutation(x_train.shape[0]))
         x_train = x_train[shuffle_index,:]
         y_train = y_train[shuffle_index]
         for i in range(batches):
-            input = x_train[batch_size*i:batch_size*(i+1),:]
-            target = y_train[batch_size*i:batch_size*(i+1),:]
-            model.forward(input,targets=target)
+            input_train = x_train[batch_size*i:batch_size*(i+1),:]
+            target_train = y_train[batch_size*i:batch_size*(i+1),:]
+            (_,train_error) = model.forward(input_train,targets=target_train)
+            train_errors.append(train_error)
             model.backward()
             for j in range(layers):
                 # model.layers[2*j].w += lr*model.layers[2*j].d_w
@@ -323,35 +327,42 @@ def train(model, x_train, y_train, x_valid, y_valid, config):
                 model.layers[2*j].w += v_dw[j]
                 model.layers[2*j].b += v_db[j]
 
-        (output,error) = model.forward(x_valid, targets=y_valid)
-        print(error)
-        error = error/y_valid.shape[0]
+        (_,valid_error) = model.forward(x_valid, targets=y_valid)
+        #print(error)
+        valid_errors.append(valid_error/y_valid.shape[0])
         if config['early_stop']:
-            count_reverse = 0
-            count = 0
-            if count> config['early_stop_epoch']-2 and error[count] >error[count-1]:
+            if epoch> config['early_stop_epoch']-2 and valid_errors[epoch] >valid_errors[epoch-1]:
                 count_reverse += 1
                 if count_reverse == config['early_stop_epoc']-1:
                     break
             else:
                 count_reverse = 0
                 for j in range(layers):
-                    best_dw[j] = model.layers[2*j].w 
-                    best_db[j] = model.layers[2*j].b 
-            count += 1        
+                    best_w[j] = model.layers[2*j].w 
+                    best_b[j] = model.layers[2*j].b
+        else:
+            for j in range(layers):
+                best_w[j] = model.layers[2*j].w 
+                best_b[j] = model.layers[2*j].b                  
         
-        errors.append(error)
-    
-    plt.plot(errors)
-    plt.show()
+    for j in range(layers):
+        model.layers[2*j].w = best_w[j]
+        model.layers[2*j].b = best_b[j]    
+    # plt.plot(errors)
+    # plt.show()
+    return train_errors,valid_errors
 
 
 def test(model, X_test, y_test):
     """
     Calculate and return the accuracy on the test set.
     """
+    (output,_) = model.forward(X_test)
+    pred = np.argmax(output,axis = 1)
+    label = np.argmax(y_test,axis = 1)
+    acc = np.sum(pred== label)/(y_test.shape[0])
+    return acc
 
-    raise NotImplementedError("Test method not implemented")
 
 def check_grad(model, X_check, y_check):
     X_check =X_check[:1]
@@ -417,3 +428,4 @@ if __name__ == "__main__":
     train(model, x_train, y_train, x_valid, y_valid, config)
     
     test_acc = test(model, x_test, y_test)
+    print(test_acc)
