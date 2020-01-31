@@ -327,6 +327,8 @@ def train(model, x_train, y_train, x_valid, y_valid, config):
     best_b = [0 for _ in range(layers)]
     (_,valid_error) = model.forward(x_valid, targets=y_valid)
     valid_errors.append(valid_error)
+
+    early_stop_counter = 0
     for epoch in range(20):
         shuffle_index = list(np.random.permutation(x_train.shape[0]))
         x_train = x_train[shuffle_index,:]
@@ -337,35 +339,23 @@ def train(model, x_train, y_train, x_valid, y_valid, config):
             (_,train_error) = model.forward(input_train,targets=target_train)
             train_errors.append(train_error)
             model.backward()
-            # for j in range(layers):
-            #     v_dw[j] = gamma*v_dw[j] + lr*model.layers[2*j].d_w
-            #     v_db[j] = gamma*v_db[j] + lr*model.layers[2*j].d_b
-            #     model.layers[2*j].w += v_dw[j]
-            #     model.layers[2*j].b += v_db[j]
 
         (_,valid_error) = model.forward(x_valid, targets=y_valid)
-        print(valid_error)
+        if len(valid_errors)!=0 and valid_error > valid_errors[-1]:
+            early_stop_counter += 1
+
         valid_errors.append(valid_error)
-        if config['early_stop']:
-            if epoch> config['early_stop_epoch']-2 and valid_errors[epoch] >valid_errors[epoch-1]:
-                count_reverse += 1
-                if count_reverse == config['early_stop_epoc']-1:
-                    break
-            else:
-                count_reverse = 0
-                for j in range(layers):
-                    best_w[j] = model.layers[2*j].w 
-                    best_b[j] = model.layers[2*j].b
+        if config['early_stop'] and early_stop_counter == config['early_stop_epoch']:
+            break
         else:
             for j in range(layers):
                 best_w[j] = model.layers[2*j].w 
-                best_b[j] = model.layers[2*j].b                  
-        
+                best_b[j] = model.layers[2*j].b
+
     for j in range(layers):
         model.layers[2*j].w = best_w[j]
-        model.layers[2*j].b = best_b[j]    
-    # plt.plot(errors)
-    # plt.show()
+        model.layers[2*j].b = best_b[j]
+    print(valid_errors)
     return train_errors,valid_errors
 
 
