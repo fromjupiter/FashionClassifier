@@ -8,7 +8,6 @@ def trainModelByConfig(config, plot_title='Default Title'):
     # Load the data
     X, y = load_data(path="./", mode="train")
     x_test,  y_test  = load_data(path="./", mode="t10k")
-    print('--- Below is the routine output ---')
     X_train, y_train, X_valid, y_valid = split(X, y, do_check=False)
     
     train_errors,valid_errors, train_accuracies, valid_accuracies = train(model, X_train, y_train, X_valid, y_valid, config)
@@ -61,7 +60,7 @@ def showActivation():
 
 def showNetworkTopology():
     config = load_config("./")
-    print("Dalving hidden units..")
+    print("Halving hidden units..")
     config['layer_specs'][1] = 50
     config['layer_specs'][2] = 50
     trainModelByConfig(config, plot_title='Half Hidden Units(50)')
@@ -83,4 +82,5 @@ args = parser.parse_args()
 
 # Create the model
 
+print('--- Below is the routine output ---')
 locals()[args.routine]()
