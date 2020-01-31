@@ -285,11 +285,11 @@ class Neuralnetwork():
         '''
         reg_loss = 0
         for layer in self.layers:
-            try:
+            if type(layer) is Layer:
                 reg_loss += np.sum(layer.w*layer.w) + np.sum(layer.b*layer.b)
-            except AttributeError:
-                pass
-        loss = -(np.log(logits)*targets).sum()/targets.shape[0] + self.reg*reg_loss/(2*targets.shape[0])
+        
+        # clip is used to avoid log(0)
+        loss = -(targets*np.log(np.clip(logits,a_min=1e-10, a_max=None))).sum()/targets.shape[0] + self.reg*reg_loss/(2*targets.shape[0])
         return loss
 
     def backward(self,do_gd = True):
