@@ -69,7 +69,7 @@ def showNetworkTopology():
     config['layer_specs'][2] = 200
     trainModelByConfig(config, plot_title='Double Hidden Units(200)')
     print("Using two hidden layers..")
-    config['layer_specs'] = [784, 50, 50, 50, 10]
+    config['layer_specs'] = [784, 45, 45, 45, 10]
     trainModelByConfig(config, plot_title='Two Hidden Layers')
     plt.show()
 
