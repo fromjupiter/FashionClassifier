@@ -122,7 +122,7 @@ class Activation():
         elif self.activation_type == "ReLU":
             return self.ReLU(a)
 
-    def backward(self, delta, reg, gamma,lr,grd_check = False):
+    def backward(self, delta, reg, gamma, lr, do_gd = True):
         """
         Compute the backward pass.
         """
@@ -216,20 +216,18 @@ class Layer():
         self.a = self.x.dot(self.w) + self.b
         return self.a
 
-    def backward(self, delta,reg, gamma,lr,grd_check = False):
+    def backward(self, delta,reg, gamma,lr, do_gd = True):
         """
         Write the code for backward pass. This takes in gradient from its next layer as input,
         computes gradient for its weights and the delta to pass to its previous layers.
         Return self.dx
         """
         self.d_x = delta.dot(self.w.T) 
-        self.d_w = self.x.T.dot(delta) / delta.shape[0] + reg*self.w/ delta.shape[0] #xp
-        self.d_b = delta.sum(axis=0) / delta.shape[0] + reg*self.b/ delta.shape[0]  #xp
-        # self.d_w = self.x.T.dot(delta) / delta.shape[0]  #xp
-        # self.d_b = delta.sum(axis=0) / delta.shape[0]  #xp
-        if not grd_check:
-            self.v_dw = gamma*self.v_dw + lr*self.d_w   #xp
-            self.v_db = gamma*self.v_db + lr*self.d_b   #xp
+        self.d_w = self.x.T.dot(delta) / delta.shape[0] + reg*self.w/ delta.shape[0]
+        self.d_b = delta.sum(axis=0) / delta.shape[0] + reg*self.b/ delta.shape[0]
+        if do_gd:
+            self.v_dw = gamma*self.v_dw + lr*self.d_w
+            self.v_db = gamma*self.v_db + lr*self.d_b
             self.w += self.v_dw #xp
             self.b += self.v_db #xp
         return self.d_x
@@ -253,9 +251,9 @@ class Neuralnetwork():
         self.x = None        # Save the input to forward in this
         self.y = None        # Save the output vector of model in this
         self.targets = None  # Save the targets in forward in this variable
-        self.reg = config['L2_penalty'] #xp
-        self.gamma = config['momentum_gamma']#xp
-        self.lr = config['learning_rate'] #xp
+        self.reg = config['L2_penalty']
+        self.gamma = config['momentum_gamma']
+        self.lr = config['learning_rate']
         # Add layers specified by layer_specs.
         for i in range(len(config['layer_specs']) - 1):
             self.layers.append(Layer(config['layer_specs'][i], config['layer_specs'][i+1]))
@@ -291,19 +289,18 @@ class Neuralnetwork():
                 reg_loss += np.sum(layer.w*layer.w) + np.sum(layer.b*layer.b)
             except AttributeError:
                 pass
-        loss = -(np.log(logits)*targets).sum() /targets.shape[0]+ self.reg*reg_loss /(2*targets.shape[0])
+        loss = -(np.log(logits)*targets).sum()/targets.shape[0] + self.reg*reg_loss/(2*targets.shape[0])
         return loss
-        # return -(np.log(logits)*targets).sum() /targets.shape[0]   #xp
 
-    def backward(self,grd_check = False):
+    def backward(self,do_gd = True):
         '''
         Implement backpropagation here.
         Call backward methods of individual layer's.
         '''
         delta = self.targets - self.y
         for layer in reversed(self.layers):
-            delta = layer.backward(delta,self.reg,self.gamma,self.lr,grd_check)
-        # return delta #xp
+            delta = layer.backward(delta, self.reg, self.gamma, self.lr, do_gd)
+        return delta
 
 
 def train(model, x_train, y_train, x_valid, y_valid, config):
@@ -314,18 +311,21 @@ def train(model, x_train, y_train, x_valid, y_valid, config):
     Use config to set parameters for training like learning rate, momentum, etc.
     """
     batch_size = config['batch_size']
-    lr = config['learning_rate']
-    gamma = config['momentum_gamma']
-    epoches = config['epochs']
+    EPOCH = config['epochs']
     batches = x_train.shape[0]//batch_size
-    valid_errors = []
     train_errors = []
+    valid_errors = []
+    train_accuracies = []
+    valid_accuracies = []
     layers = len(model.layers)//2+1
-    v_dw = [0 for _ in range(layers)]
-    v_db = [0 for _ in range(layers)]
     best_w = [0 for _ in range(layers)]
     best_b = [0 for _ in range(layers)]
-    (_,valid_error) = model.forward(x_valid, targets=y_valid)
+    
+    (train_out,train_error) = model.forward(x_train, targets=y_train)
+    (valid_out,valid_error) = model.forward(x_valid, targets=y_valid)
+    train_accuracies.append(np.sum(np.argmax(train_out,axis = 1)==np.argmax(y_train,axis = 1))/(y_train.shape[0]))
+    valid_accuracies.append(np.sum(np.argmax(valid_out,axis = 1)==np.argmax(y_valid,axis = 1))/(y_valid.shape[0]))
+    train_errors.append(train_error)
     valid_errors.append(valid_error)
 
     early_stop_counter = 0
@@ -336,14 +336,16 @@ def train(model, x_train, y_train, x_valid, y_valid, config):
         for i in range(batches):
             input_train = x_train[batch_size*i:batch_size*(i+1),:]
             target_train = y_train[batch_size*i:batch_size*(i+1),:]
-            (_,train_error) = model.forward(input_train,targets=target_train)
-            train_errors.append(train_error)
+            model.forward(input_train,targets=target_train)
             model.backward()
-
-        (_,valid_error) = model.forward(x_valid, targets=y_valid)
+        (train_out,train_error) = model.forward(x_train, targets=y_train)
+        (valid_out,valid_error) = model.forward(x_valid, targets=y_valid)
         if len(valid_errors)!=0 and valid_error > valid_errors[-1]:
             early_stop_counter += 1
 
+        train_accuracies.append(np.sum(np.argmax(train_out,axis = 1)==np.argmax(y_train,axis = 1))/(y_train.shape[0]))
+        valid_accuracies.append(np.sum(np.argmax(valid_out,axis = 1)==np.argmax(y_valid,axis = 1))/(y_valid.shape[0]))
+        train_errors.append(train_error)
         valid_errors.append(valid_error)
         if config['early_stop'] and early_stop_counter == config['early_stop_epoch']:
             break
@@ -355,8 +357,7 @@ def train(model, x_train, y_train, x_valid, y_valid, config):
     for j in range(layers):
         model.layers[2*j].w = best_w[j]
         model.layers[2*j].b = best_b[j]
-    print(valid_errors)
-    return train_errors,valid_errors
+    return train_errors, valid_errors, train_accuracies, valid_accuracies
 
 
 def test(model, X_test, y_test):
@@ -384,7 +385,7 @@ def check_grad(model, X_check, y_check):
     
     for grad in check_list:
         model.forward(X_check, targets=y_check)
-        model.backward(grd_check = True) #xp
+        model.backward(do_gd = True)
         target = grad.replace('d_','')
         x=[target, epsilon, -eval(grad), None]
         exec(target+' -= epsilon')
@@ -397,7 +398,28 @@ def check_grad(model, X_check, y_check):
     df = pd.DataFrame(table, columns=['target','epsilon','gradient','approx'])
     print(df)
 
+def split(X, y, do_check=True):
+    # Create splits for validation data here.
+    train_indices = []
+    valid_indices = []
+    check_indices = []
 
+    # evenly distribute labels
+    for i in range(0, y.shape[1]):
+        total = np.argwhere(y[:,i]==1).flatten()
+        check_indices.extend(total[:2])
+        valid_indices.extend(total[:1000])
+        train_indices.extend(total[1000:])
+
+    if do_check:
+        print("---- Checking gradient ----")
+        check_grad(model, X[check_indices], y[check_indices])
+        print("---- Checking done ----")
+
+    assert sum(valid_indices)+sum(train_indices) == sum(range(len(X)))
+    x_valid, y_valid = X[valid_indices], y[valid_indices]
+    x_train, y_train = X[train_indices], y[train_indices]
+    return x_train, y_train, x_valid, y_valid
 
 
 if __name__ == "__main__":
@@ -411,27 +433,9 @@ if __name__ == "__main__":
     x_train, y_train = load_data(path="./", mode="train")
     x_test,  y_test  = load_data(path="./", mode="t10k")
 
-    # Create splits for validation data here.
-    train_indices = []
-    valid_indices = []
-    check_indices = []
-
-    # evenly distribute labels
-    for i in range(0, y_train.shape[1]):
-        total = np.argwhere(y_train[:,i]==1).flatten()
-        check_indices.extend(total[:2])
-        valid_indices.extend(total[:1000])
-        train_indices.extend(total[1000:])
-    print("---- Checking gradient ----")
-    check_grad(model, x_train[check_indices], y_train[check_indices])
-    print("---- Checking done ----")
-
-    assert sum(valid_indices)+sum(train_indices) == sum(range(len(x_train)))
-    x_valid, y_valid = x_train[valid_indices], y_train[valid_indices]
-    x_train, y_train = x_train[train_indices], y_train[train_indices]
-
+    x_train, y_train, x_valid, y_valid = split(x_train, y_train)
     # train the model
     train(model, x_train, y_train, x_valid, y_valid, config)
     
     test_acc = test(model, x_test, y_test)
-    print(test_acc)
+    print("Test accuracy:" + str(test_acc))
