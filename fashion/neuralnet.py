@@ -311,7 +311,7 @@ def train(model, x_train, y_train, x_valid, y_valid, config):
     Use config to set parameters for training like learning rate, momentum, etc.
     """
     batch_size = config['batch_size']
-    EPOCH = config['epochs']
+    EPOCHS = config['epochs']
     batches = x_train.shape[0]//batch_size
     train_errors = []
     valid_errors = []
@@ -320,16 +320,9 @@ def train(model, x_train, y_train, x_valid, y_valid, config):
     layers = len(model.layers)//2+1
     best_w = [0 for _ in range(layers)]
     best_b = [0 for _ in range(layers)]
-    
-    (train_out,train_error) = model.forward(x_train, targets=y_train)
-    (valid_out,valid_error) = model.forward(x_valid, targets=y_valid)
-    train_accuracies.append(np.sum(np.argmax(train_out,axis = 1)==np.argmax(y_train,axis = 1))/(y_train.shape[0]))
-    valid_accuracies.append(np.sum(np.argmax(valid_out,axis = 1)==np.argmax(y_valid,axis = 1))/(y_valid.shape[0]))
-    train_errors.append(train_error)
-    valid_errors.append(valid_error)
 
     early_stop_counter = 0
-    for epoch in range(20):
+    for epoch in range(EPOCHS):
         shuffle_index = list(np.random.permutation(x_train.shape[0]))
         x_train = x_train[shuffle_index,:]
         y_train = y_train[shuffle_index]

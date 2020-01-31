@@ -18,7 +18,6 @@ def trainModelByConfig(config, plot_title='Default Title'):
     axs[0].set_title('Cross-Entropy Loss')
     axs[1].set_title('Accuracy(Percent Correct)')
     axs[1].set_xlabel('Epoch')
-    axs[1].set_xticks(range(len(train_errors)))
     xlabels = list(range(len(train_errors)))
     axs[0].plot(xlabels, train_errors,color = 'b', label='train')
     axs[0].plot(xlabels, valid_errors,color = 'g', label='holdout')
@@ -37,8 +36,10 @@ def showTraining():
 
 def showRegularization():
     config = load_config("./")
+    print("Using 0.001 L2 regularization..")
     config['L2_penalty'] = 0.001
     trainModelByConfig(config, plot_title='L2=0.001')
+    print("Using 0.0001 L2 regularization..")
     config['L2_penalty'] = 0.0001
     trainModelByConfig(config, plot_title='L2=0.0001')
     # avoid quitting
@@ -59,7 +60,19 @@ def showActivation():
     plt.show()
 
 def showNetworkTopology():
-    pass
+    config = load_config("./")
+    print("Dalving hidden units..")
+    config['layer_specs'][1] = 50
+    config['layer_specs'][2] = 50
+    trainModelByConfig(config, plot_title='Half Hidden Units(50)')
+    print("Doubling hidden units..")
+    config['layer_specs'][1] = 200
+    config['layer_specs'][2] = 200
+    trainModelByConfig(config, plot_title='Double Hidden Units(200)')
+    print("Using two hidden layers..")
+    config['layer_specs'] = [784, 50, 50, 50, 10]
+    trainModelByConfig(config, plot_title='Two Hidden Layers')
+    plt.show()
 
 parser = argparse.ArgumentParser(description='Fashion Classifier entry point')
 
