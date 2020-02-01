@@ -189,7 +189,7 @@ class Layer():
         Define the architecture and create placeholder.
         """
         np.random.seed(42)
-        self.w = np.random.normal(size=(in_units, out_units))    # Declare the Weight matrix
+        self.w = np.random.normal(loc=0, scale=1/np.sqrt(in_units), size=(in_units, out_units))    # Declare the Weight matrix
         self.b = np.zeros(out_units)    # Create a placeholder for Bias
         self.x = None    # Save the input to forward in this
         self.a = None    # Save the output of forward pass in this (without activation)
@@ -335,12 +335,15 @@ def train(model, x_train, y_train, x_valid, y_valid, config):
         (valid_out,valid_error) = model.forward(x_valid, targets=y_valid)
         if len(valid_errors)!=0 and valid_error > valid_errors[-1]:
             early_stop_counter += 1
+        else:
+            early_stop_counter = 0
 
         train_accuracies.append(np.sum(np.argmax(train_out,axis = 1)==np.argmax(y_train,axis = 1))/(y_train.shape[0]))
         valid_accuracies.append(np.sum(np.argmax(valid_out,axis = 1)==np.argmax(y_valid,axis = 1))/(y_valid.shape[0]))
         train_errors.append(train_error)
         valid_errors.append(valid_error)
         if config['early_stop'] and early_stop_counter == config['early_stop_epoch']:
+            print("early stopping at epoch {}, best performance at epoch {}.".format(epoch, epoch - early_stop_counter))
             break
         else:
             for j in range(layers):
@@ -378,41 +381,42 @@ def check_grad(model, X_check, y_check):
     
     for grad in check_list:
         model.forward(X_check, targets=y_check)
-        model.backward(do_gd = True)
+        model.backward(do_gd = False)
         target = grad.replace('d_','')
-        x=[target, epsilon, -eval(grad), None]
+        x=[target, epsilon, -eval(grad), None, None]
         exec(target+' -= epsilon')
         pre = model.forward(X_check, targets=y_check)[1]
         exec(target+' += 2*epsilon')
         curr = model.forward(X_check, targets=y_check)[1]
         x[3] = (curr - pre)/epsilon/2
+        x[4] = abs(x[3] - x[2])
         table.append(x)
     
-    df = pd.DataFrame(table, columns=['target','epsilon','gradient','approx'])
+    df = pd.DataFrame(table, columns=['target','epsilon','gradient','approx', 'delta'])
     print(df)
 
-def split(X, y, do_check=True):
+def split(X, y):
     # Create splits for validation data here.
     train_indices = []
     valid_indices = []
-    check_indices = []
 
     # evenly distribute labels
     for i in range(0, y.shape[1]):
         total = np.argwhere(y[:,i]==1).flatten()
-        check_indices.extend(total[:2])
         valid_indices.extend(total[:1000])
         train_indices.extend(total[1000:])
-
-    if do_check:
-        print("---- Checking gradient ----")
-        check_grad(model, X[check_indices], y[check_indices])
-        print("---- Checking done ----")
 
     assert sum(valid_indices)+sum(train_indices) == sum(range(len(X)))
     x_valid, y_valid = X[valid_indices], y[valid_indices]
     x_train, y_train = X[train_indices], y[train_indices]
     return x_train, y_train, x_valid, y_valid
+
+def getCheck(X, y):
+    check_indices = []
+    for i in range(0, y.shape[1]):
+        total = np.argwhere(y[:,i]==1).flatten()
+        check_indices.extend(total[:1])
+    return X[check_indices], y[check_indices]
 
 
 if __name__ == "__main__":

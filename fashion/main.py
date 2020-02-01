@@ -8,7 +8,7 @@ def trainModelByConfig(config, plot_title='Default Title'):
     # Load the data
     X, y = load_data(path="./", mode="train")
     x_test,  y_test  = load_data(path="./", mode="t10k")
-    X_train, y_train, X_valid, y_valid = split(X, y, do_check=False)
+    X_train, y_train, X_valid, y_valid = split(X, y)
     
     train_errors,valid_errors, train_accuracies, valid_accuracies = train(model, X_train, y_train, X_valid, y_valid, config)
     print("Test accuracy:" + str(test(model, x_test, y_test)))
@@ -27,6 +27,15 @@ def trainModelByConfig(config, plot_title='Default Title'):
     plt.draw()
     plt.pause(0.001)
 
+def checkGrad():
+    config = load_config("./")
+    model  = Neuralnetwork(config)
+    X, y = load_data(path="./", mode="train")
+    X_check, y_check = getCheck(X, y)
+    print("---- Checking gradient ----")
+    check_grad(model, X_check, y_check)
+    print("---- Checking done ----")
+
 def showTraining():
     config = load_config("./")
     trainModelByConfig(config, plot_title='NN Training')
@@ -35,6 +44,7 @@ def showTraining():
 
 def showRegularization():
     config = load_config("./")
+    config['epochs'] = int(config['epochs'] * 1.1)
     print("Using 0.001 L2 regularization..")
     config['L2_penalty'] = 0.001
     trainModelByConfig(config, plot_title='L2=0.001')
@@ -69,7 +79,7 @@ def showNetworkTopology():
     config['layer_specs'][2] = 200
     trainModelByConfig(config, plot_title='Double Hidden Units(200)')
     print("Using two hidden layers..")
-    config['layer_specs'] = [784, 45, 45, 45, 10]
+    config['layer_specs'] = [784, 47, 47, 47, 10]
     trainModelByConfig(config, plot_title='Two Hidden Layers')
     plt.show()
 

@@ -46,9 +46,33 @@ University of California, San Diego \\
 Logistic regression has been proved to be too simple to solve some of the classification problems. In this paper, we manage to implement a more advanced machine learning system with the introduce of hidden layers,regularization and different kinds of activation functions.Our models are evaluated on the MNIST dataset to do fashion classification test. As a result, our model  achieves an average accuracy of $ 99\% $. We hope our efforts can clearly explain the importance of hidden layers,regularization and different kinds of activation functions.
 \section{Method}
 \section{Dataset and Task Description}
+Fashion MNIST dataset is used in our lab. Normalization and one-hot-encoding is applied before using them to train our model.
 \section{Gradient Computation Check}
+
 \section{Gradient Descent Using Momentum}
+* TODO:Describe your training procedure *\\
+Figure X shows the loss and accuracy during training process. The final test accuracy is 0.8796.\\
+* TODO:PLOT * \\
 \section{Experiment with Regularization}
+We test different L2 penalty regularizors in this section. i.e. we choose different $\lambda$ values in the regularizor term $\lambda (\parallel w \parallel_2^2+\parallel b \parallel_2^2)$ of loss function. \\
+With $\lambda = 0.001$, we get a final test accuracy of 0.8807. \\
+With $\lambda = 0.0001$, we get a final test accuracy of 0.8804. \\
+
+* TODO: Comment on the change *
+
 \section{Experiment with Activations}
+In this section, we experiment with different activation functions.Figure X shows the loss and accuracy during training process.\\
+Using $tanh$ as our activation, the final test accuracy is 0.8796. \\
+Using $sigmoid$ as our activation, the final test accuracy is 0.8479. \\
+Using $ReLU$ as our activation, the final test accuracy is 0.876. \\
+*TODO: Comment on performance and compare. what works best. add plot*
+
 \section{Experiment with Network Topology}
+In this section, we experiment with different neural network topology. Figure X shows the loss and accuracy during training process. \\
+By halving the number of hidden units,i.e. set it to 50, the final test accuracy is 0.8755.\\
+By doubling the number of hidden units,i.e. set it to 200, the final test accuracy is 0.881.\\
+We also experiment a neural network with two hidden layers while keeping the same number of total parameters as one 50-unit hidden layer, i.e. two 47-unit hidden layers. The final test accuracy is 0.8821. \\
+
+Here we see that halving the hidden unit number decreases performance, but insignificantly. Similarly, doubling the hidden unit number increases performance insignificantly. On the other hand, extending the neural network's depth while keep the same number of parameters, the performance increases by a relatively huge amount. \\
+To conclude, depth is important.
 \end{document}
