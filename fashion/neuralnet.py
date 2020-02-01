@@ -368,8 +368,6 @@ def test(model, X_test, y_test):
 
 
 def check_grad(model, X_check, y_check):
-    X_check =X_check[:1]
-    y_check =y_check[:1]
     table = []
     epsilon = 1e-2
     # output bias check
@@ -379,20 +377,23 @@ def check_grad(model, X_check, y_check):
     check_list = ['model.layers[-1].d_b[0]', 'model.layers[-3].d_b[0]', 'model.layers[-1].d_w[0][0]', 'model.layers[-1].d_w[1][1]',\
         'model.layers[2].d_w[0][0]', 'model.layers[2].d_w[1][1]']
     
-    for grad in check_list:
-        model.forward(X_check, targets=y_check)
-        model.backward(do_gd = False)
-        target = grad.replace('d_','')
-        x=[target, epsilon, -eval(grad), None, None]
-        exec(target+' -= epsilon')
-        pre = model.forward(X_check, targets=y_check)[1]
-        exec(target+' += 2*epsilon')
-        curr = model.forward(X_check, targets=y_check)[1]
-        x[3] = (curr - pre)/epsilon/2
-        x[4] = abs(x[3] - x[2])
-        table.append(x)
+    for i in range(len(X_check)):
+        X_sample = X_check[i:i+1]
+        y_sample = y_check[i:i+1]
+        for grad in check_list:
+            model.forward(X_sample, targets=y_sample)
+            model.backward(do_gd = False)
+            target = grad.replace('d_','')
+            x=[np.argmax(y_sample), target, epsilon, -eval(grad), None, None]
+            exec(target+' -= epsilon')
+            pre = model.forward(X_sample, targets=y_sample)[1]
+            exec(target+' += 2*epsilon')
+            curr = model.forward(X_sample, targets=y_sample)[1]
+            x[-2] = (curr - pre)/epsilon/2
+            x[-1] = abs(x[-2] - x[-3])
+            table.append(x)
     
-    df = pd.DataFrame(table, columns=['target','epsilon','gradient','approx', 'delta'])
+    df = pd.DataFrame(table, columns=['class','target','epsilon','gradient','approx', 'delta'])
     print(df)
 
 def split(X, y):
