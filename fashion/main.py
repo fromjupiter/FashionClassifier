@@ -71,15 +71,13 @@ def showActivation():
 def showNetworkTopology():
     config = load_config("./")
     print("Halving hidden units..")
-    config['layer_specs'][1] = 50
-    config['layer_specs'][2] = 50
-    trainModelByConfig(config, plot_title='Half Hidden Units(50)')
+    config['layer_specs'][1] = 25
+    trainModelByConfig(config, plot_title='Half Hidden Units(25)')
     print("Doubling hidden units..")
-    config['layer_specs'][1] = 200
-    config['layer_specs'][2] = 200
-    trainModelByConfig(config, plot_title='Double Hidden Units(200)')
+    config['layer_specs'][1] = 100
+    trainModelByConfig(config, plot_title='Double Hidden Units(100)')
     print("Using two hidden layers..")
-    config['layer_specs'] = [784, 47, 47, 47, 10]
+    config['layer_specs'] = [784, 47, 47, 10]
     trainModelByConfig(config, plot_title='Two Hidden Layers')
     plt.show()
 
