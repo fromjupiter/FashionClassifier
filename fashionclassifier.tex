@@ -40,13 +40,14 @@ University of California, San Diego \\
 \maketitle
 
 \begin{abstract}
-	
+Logistic regression has been proved to be too simple to solve some of the classification problems. In this paper, we manage to implement a more advanced machine learning system with the introduction of hidden layers, regularization and different kinds of activation functions. Our models are evaluated on the MNIST dataset to do the fashion classification test. As a result, our model achieves an average accuracy of $ 87\% $. We hope our efforts can clearly explain the importance of hidden layers, regularization and different kinds of activation functions.	
 \end{abstract}
 \section{Introduction}
-Logistic regression has been proved to be too simple to solve some of the classification problems. In this paper, we manage to implement a more advanced machine learning system with the introduce of hidden layers,regularization and different kinds of activation functions.Our models are evaluated on the MNIST dataset to do fashion classification test. As a result, our model  achieves an average accuracy of $ 99\% $. We hope our efforts can clearly explain the importance of hidden layers,regularization and different kinds of activation functions.
+Modern machine learning models are usually made up of more than one layer. Also, scientists need to carefully choose activation functions and regularization to hope for a more general result on test examples.
 \section{Method}
+In this paper, we first extend our model to 3 layers: An input layer, a hidden layer and a output layer. Meanwhile we perform momentum in gradient descent process. Then we add L2 penalty regularizers. After that, we experiment with three kinds of activation functions and change the structure of the model, hoping to improve the performance.
 \section{Dataset and Task Description}
-Fashion MNIST dataset is used in our lab. Normalization and one-hot-encoding is applied before using them to train our model.
+Fashion MNIST dataset is used in our lab. Normalization and one-hot-encoding are applied before using them to train our model.
 \section{Gradient Computation Check}
 We pick one sample from each class and perform gradient check. Table ~\ref{table:gradCheck} shows our gradient check result. Column "checked weight" shows the parameter we are checking on. From column "delta", we can see that our gradient calculation is working as expected.
 \begin{table}[]
@@ -118,32 +119,80 @@ We pick one sample from each class and perform gradient check. Table ~\ref{table
 \end{tabular}
 \end{table}
 \section{Gradient Descent Using Momentum}
-The final test accuracy is 0.8796.\\
+We use an input layer, a hidden layer(50 units) and an output layer in this experiment. We put the last 1000 examples of each label into validation data and the rest into training data. Then we shuffle the training data and divide them into mini-batches. In the training process, we experiment learning rate of 0.1,0.01 and 0.005, and we find 0.005 gives the best result. We keep the momentum parameter gamma to 0.9. Also, we used early-stopping to keep the best parameters, although in this problem the trick is not triggered.
+Figure 1 shows the result, and the final test accuracy is 0.8758.\\
+\begin{figure}[h]	
+	\centering
+	\includegraphics[scale=0.5]{./plots/Training.png}
+	\caption{$momentum(\gamma) = 0.9$ , Cross-Entropy Loss \& Accuracy vs epoch}
+\end{figure}
+
+
 
 
 \section{Experiment with Regularization}
 We test different L2 penalty regularizors in this section. i.e. we choose different $\lambda$ values in the regularizor term $\lambda (\parallel w \parallel_2^2+\parallel b \parallel_2^2)$ of loss function. \\
-With $\lambda = 0.001$, we get a final test accuracy of 0.8807. \\
-With $\lambda = 0.0001$, we get a final test accuracy of 0.8804. \\
-
-The performance increases slightly better compared to no regularization. This suggests that adding regularizor makes our neural network more generalized.
-
+Figure 2 shows the result, and with $\lambda = 0.001$, we get a final test accuracy of 0.8728. \\
+Figure 3 shows the result, and with  $\lambda = 0.0001$, we get a final test accuracy of 0.873. \\
+\begin{figure}[h]	
+	\centering
+	\includegraphics[scale=0.5]{./plots/001Regular.png}
+	\caption{$\lambda = 0.001$ , Cross-Entropy Loss \& Accuracy vs epoch}
+\end{figure}
+\begin{figure}[h]	
+	\centering
+	\includegraphics[scale=0.5]{./plots/0001Regular.png}
+	\caption{$\lambda = 0.0001$ , Cross-Entropy Loss \& Accuracy vs epoch}
+\end{figure}
+The performance is almost the same compared with no regularization, maybe because the task is quite easy here. 
 
 \section{Experiment with Activations}
-In this section, we experiment with different activation functions.Figure X shows the loss and accuracy during training process.\\
-Using $tanh$ as our activation, the final test accuracy is 0.8796. \\
-Using $sigmoid$ as our activation, the final test accuracy is 0.8479. \\
-Using $ReLU$ as our activation, the final test accuracy is 0.876. \\
-
-Based on the result, $tanh$ outperforms other activation functions, $sigmoid$ is significantly worse than other activation functions. \\
+In this section, we experiment with different activation functions.Figures below show the loss and accuracy during training process.\\
+Figure 4 uses $tanh$ as our activation, and the final test accuracy is 0.8758. \\
+Figure 5 uses  $sigmoid$ as our activation, and the final test accuracy is 0.8684. \\
+Figure 6 uses  $ReLU$ as our activation, and the final test accuracy is 0.8762. \\
+\begin{figure}[h]	
+	\centering
+	\includegraphics[scale=0.5]{./plots/TanhActivation.png}
+	\caption{activation = $tanh$ , Cross-Entropy Loss \& Accuracy vs epoch}
+\end{figure}
+\begin{figure}[h]	
+	\centering
+	\includegraphics[scale=0.5]{./plots/SigmoidActivation.png}
+	\caption{activation = $sigmoid$, Cross-Entropy Loss \& Accuracy vs epoch}
+\end{figure}
+\begin{figure}[h]	
+	\centering
+	\includegraphics[scale=0.5]{./plots/ReLUActivation.png}
+	\caption{activation = $ReLU$ , Cross-Entropy Loss \& Accuracy vs epoch}
+\end{figure}
+Based on accuracy, $tanh$ and $relu$ both have best performance, but the curve plotted by $sigmoid$ function is smoother than other activation functions. In this problem, $tanh$ is the best activation function.\\
 
 \section{Experiment with Network Topology}
-In this section, we experiment with different neural network topology. Figure X shows the loss and accuracy during training process. \\
-By halving the number of hidden units,i.e. set it to 50, the final test accuracy is 0.8755.\\
-By doubling the number of hidden units,i.e. set it to 200, the final test accuracy is 0.881.\\
-We also experiment a neural network with two hidden layers while keeping the same number of total parameters as one 50-unit hidden layer, i.e. two 47-unit hidden layers. The final test accuracy is 0.8821. \\
+In this section, we experiment with different neural network topology. Figures below show the loss and accuracy during training process. \\
+By halving the number of hidden units in Figure 7,i.e. set it to 25, the final test accuracy is 0.8668.\\
+By doubling the number of hidden units in Figure 8,i.e. set it to 100, the final test accuracy is 0.8763.\\
+We also experiment a neural network with two hidden layers while keeping the same number of total parameters as one 50-unit hidden layer in Figure 9, i.e. two 47-unit hidden layers. The final test accuracy is 0.8766. \\
 
 Here we see that halving the hidden unit number slightly decreases performance and doubling the hidden unit number increases performance. This makes sense because more hidden units allows the neural network to capture more useful features and hence perform better. \\
-On the other hand, by extending the neural network's depth while keeping the same number of parameters, the performance increases significantly. Hence we can conclude that depth is important in neural networks.
-
+On the other hand, by extending the neural network's depth while keeping the same number of parameters, the performance increases. Hence we can conclude that depth is important in neural networks.
+\begin{figure}[h]	
+	\centering
+	\includegraphics[scale=0.5]{./plots/HalfHiddenUnits.png}
+	\caption{Half hidden units , Cross-Entropy Loss \& Accuracy vs epoch}
+\end{figure}
+\begin{figure}[h]	
+	\centering
+	\includegraphics[scale=0.5]{./plots/DoubleHiddenUnits.png}
+	\caption{Double hidden units , Cross-Entropy Loss \& Accuracy vs epoch}
+\end{figure}
+\begin{figure}[h]	
+	\centering
+	\includegraphics[scale=0.5]{./plots/TwoHiddenLayers.png}
+	\caption{Two hidden layers , Cross-Entropy Loss \& Accuracy vs epoch}
+\end{figure}
+\section{Individual contribution}
+Our group consists of two members: \textit{Kexiang Feng} and \textit{Xupeng Yu}. \\
+\textit{Kexiang Feng} built the gradient check, and the forward and backward funciton of different activation functions. He also wrote the plotting function.\\
+\textit{Xupeng Yu} built the momentum and regularization part. He also finished the main report.
 \end{document}
