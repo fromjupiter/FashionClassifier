@@ -122,7 +122,7 @@ class Activation():
         elif self.activation_type == "ReLU":
             return self.ReLU(a)
 
-    def backward(self, delta, reg, gamma, lr, do_gd = True):
+    def backward(self, delta, reg=0, gamma=0, lr=0, do_gd = False):
         """
         Compute the backward pass.
         """

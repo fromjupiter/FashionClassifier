@@ -23,3 +23,5 @@ Then you can run the main script for each section of our reports:
     ./main.py -r showRegularization
     ./main.py -r showActivation
     ./main.py -r showNetworkTopology
+
+Note that  checker.py will fail because the pickled baseline uses a different initialized weights.
